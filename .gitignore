@@ -196,3 +196,4 @@ cython_debug/
 .venv/
 # Large data files
 /data/raw/*
+model_rf.joblib
