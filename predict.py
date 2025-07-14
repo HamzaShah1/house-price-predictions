@@ -1,27 +1,50 @@
-import argparse, joblib, pandas as pd
+#!/usr/bin/env python
+"""
+Example:
+    python predict.py \
+        --gr-liv-area 1500 \
+        --lot-area 6000 \
+        --overall-qual 6 \
+        --year-built 1995
+"""
+from argparse import ArgumentParser
 from pathlib import Path
 
-MODEL_PATH = Path(__file__).resolve().parent / "model_rf_small.joblib"
+import pandas as pd
+import joblib
+from src.feature_engineering import build_preprocessor
 
-def main():
-    p = argparse.ArgumentParser()
-    p.add_argument("--GrLivArea", type=float, default=0)
-    p.add_argument("--LotArea", type=float, default=0)
-    p.add_argument("--OverallQual", type=int, default=0)
-    p.add_argument("--YearBuilt", type=int, default=0)
-    args = p.parse_args()
+MODEL_PATH = Path(__file__).with_name("model_rf_small.joblib")
 
-    model = joblib.load(MODEL_PATH)
-    cols = model.feature_names_in_
-    row = {c: 0 for c in cols}
-    row["Gr Liv Area"] = args.GrLivArea
-    row["Lot Area"] = args.LotArea
-    row["Overall Qual"] = args.OverallQual
-    row["Year Built"] = args.YearBuilt
 
-    df = pd.DataFrame([row], columns=cols)
-    price = model.predict(df)[0]
+def _build_row(args) -> pd.DataFrame:
+    return pd.DataFrame(
+        [
+            {
+                "GrLivArea": args.gr_liv_area,
+                "LotArea": args.lot_area,
+                "OverallQual": args.overall_qual,
+                "YearBuilt": args.year_built,
+            }
+        ]
+    )
+
+
+def main() -> None:
+    parser = ArgumentParser(description="Predict Ames house sale price")
+    parser.add_argument("--gr-liv-area", type=float, required=True)
+    parser.add_argument("--lot-area", type=float, required=True)
+    parser.add_argument("--overall-qual", type=int, required=True)
+    parser.add_argument("--year-built", type=int, required=True)
+    args = parser.parse_args()
+
+    # Load the pipeline
+    pipe = joblib.load(MODEL_PATH)
+
+    # The pipeline already knows its preprocessor, so just predict
+    price = pipe.predict(_build_row(args))[0]
     print(f"Predicted sale price: £{price:,.0f}")
+
 
 if __name__ == "__main__":
     main()
